@@ -6,7 +6,7 @@ for libs_specs in [JasmineTitaniumApp.libs, JasmineTitaniumApp.specs]
         script_tags.push("<script type='text/javascript' src='#{js}'></script>")
 
 wv = Ti.UI.createWebView()
-template = Ti.Filesystem.getFile(Ti.Filesystem.resourcesDirectory, '/vendor/jasmine-titanium/lib/spec_runner.html')
+template = Ti.Filesystem.getFile(Ti.Filesystem.resourcesDirectory, 'vendor/jasmine-titanium/lib/spec_runner.html')
 wv.html = template.read().text.replace(/%%libs_and_specs_tags%%/, script_tags.join("\n"))
 
 window = Ti.UI.createWindow()
