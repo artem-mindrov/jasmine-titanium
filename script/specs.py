@@ -1,25 +1,42 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import os, sys, re, shutil, time, subprocess
+import os, sys, re, shutil, time, subprocess, platform
 from optparse import OptionParser
+from xml.dom.minidom import parseString
 
+def builder_for(platform_type):
+    if platform.system() == 'Windows':
+        dir = os.getenv('USERPROFILE') + "/AppData/Roaming/Titanium/mobilesdk/win32/"
+    else:
+        dir = "/Library/Application\ Support/Titanium/mobilesdk/osx/"
+
+    return "%s/%s/%s/builder.py" %(dir, sdk_version(), platform_type) 
+    
 def project_dir():
-    return resource_dir().replace("/Resources", "")
+    return resource_dir().replace("Resources", "")
 
 def resource_dir():
     script_dir = os.path.dirname(os.path.abspath(__file__))
-
-    sep = os.sep
-    return re.sub("%(sep)sResources%(sep)s.+" % locals(), "%(sep)sResources" % locals(), script_dir)
+    return re.sub("Resources.+$", "Resources", script_dir)
 
 def sdk_version():
     setting_path = os.path.join(project_dir(), ".settings", "com.appcelerator.titanium.mobile.prefs")
     version = ''
     version_constant_name = "MOBILE_PROJECT_SDK_VERSION"
-    for line in open(setting_path, 'r'):
-        if line.startswith(version_constant_name):
-            version = re.sub(version_constant_name + "=", "", line.strip())
+    
+    if os.path.exists(setting_path):
+        for line in open(setting_path, 'r'):
+            if line.startswith(version_constant_name):
+                version = re.sub(version_constant_name + "=", "", line.strip())
+    else:
+        tag_name = 'sdk-version'
+        setting_path = os.path.join(project_dir(), "tiapp.xml")
+        f = open(setting_path, "r")
+        data = f.read()
+        f.close()
+        tag = parseString(data).getElementsByTagName(tag_name)[0].toxml()
+        version = tag.replace('<%s>' % tag_name, '').replace('</%s>' % tag_name, '')
         
     return version
 
@@ -89,12 +106,16 @@ def run(platform):
     # not implemented
 
 def run_iphone_simulator():
-    system_command_path = "/Library/Application\ Support/Titanium/mobilesdk/osx/" + sdk_version() + "/iphone/builder.py"
+    system_command_path = builder_for("iphone")
+
     if os.path.exists(system_command_path):
         command_path = system_command_path
     else:
         user_command_path = "~" + system_command_path
         command_path = user_command_path
+
+    if platform.system() == 'Windows':
+        command_path = "python %s" % command_path
 
     command = command_path + " run " + project_dir()
     os.system(command)
@@ -104,13 +125,16 @@ def run_android_emulator(android_sdk_path):
         print "Please specify Android SDK Path."
         return False
 
-    system_command_path = "/Library/Application\ Support/Titanium/mobilesdk/osx/" + sdk_version() + "/android/builder.py"
+    system_command_path = builder_for("android")
 
     if os.path.exists(system_command_path):
         command_path = system_command_path
     else:
         user_command_path = "~" + system_command_path
         command_path = user_command_path
+
+    if platform.system() == 'Windows':
+        command_path = "python %s" % command_path
 
     command = command_path + " run " + project_dir() + " " + android_sdk_path
     print "Installing..."
